@@ -1,21 +1,18 @@
-# Python 编译文件
+# Python 缓存与环境
 __pycache__/
 *.py[cod]
-
-# 虚拟环境目录
+*$py.class
 venv/
 env/
 
-# 数据库文件 (绝对禁止上传)
-instance/
+# 私密数据库 (绝不能传上去)
 manager.db
-*.db
-*.sqlite3
+instance/
 
-# 用户上传的头像 (保留目录结构，不上传图片)
+# 用户上传的图片 (保留目录结构，但不传图片)
 static/avatars/*
-!static/avatars/default.png
+!static/avatars/.gitkeep
 
-# 系统及环境变量
-.DS_Store
-.env
+build/ #临时编译文件夹
+dist/  #临时编译文件夹
+*.spec #打包的配置文件
