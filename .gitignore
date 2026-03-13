@@ -1,0 +1,21 @@
+# Python 编译文件
+__pycache__/
+*.py[cod]
+
+# 虚拟环境目录
+venv/
+env/
+
+# 数据库文件 (绝对禁止上传)
+instance/
+manager.db
+*.db
+*.sqlite3
+
+# 用户上传的头像 (保留目录结构，不上传图片)
+static/avatars/*
+!static/avatars/default.png
+
+# 系统及环境变量
+.DS_Store
+.env

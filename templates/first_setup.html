@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-center align-items-center w-100 position-relative z-3" style="min-height: 75vh;">
+    <div class="surface-card-static p-4 p-md-5 mx-3 border-danger" style="width: 100%; max-width: 500px; border-width: 2px;">
+        <div class="text-center mb-5">
+            <div class="surface-card rounded-circle d-inline-flex justify-content-center align-items-center mb-3" style="width: 70px; height: 70px; background: rgba(220, 53, 69, 0.1);"><i class="fa-solid fa-triangle-exclamation text-danger fs-2"></i></div>
+            <h3 class="fw-bold text-danger mb-2">安全协议阻断：首次登入</h3>
+            <p class="text-secondary-custom small lh-lg">检测到您使用的是初始分配的系统凭证。<br>为了您的矩阵安全，请立即设定专属于您的访问档案。</p>
+        </div>
+        <form method="POST" action="/first_setup">
+            <div class="mb-4"><label class="form-label fw-bold text-secondary-custom small ms-1">绑定唯一邮箱 (不可与他人重复)</label><input type="email" name="email" class="form-control form-control-lg" value="{{ user.email }}" required></div>
+            <div class="mb-4"><label class="form-label fw-bold text-secondary-custom small ms-1">专属专家代号 (不可与他人重复)</label><input type="text" name="username" class="form-control form-control-lg" value="{{ user.username }}" required></div>
+            <div class="mb-5 position-relative">
+                <label class="form-label fw-bold text-secondary-custom small ms-1">重置高强度密码</label>
+                <div class="position-relative">
+                    <input type="password" id="setupPw" name="password" class="form-control form-control-lg pe-5" required placeholder="请输入新密码">
+                    <i class="fa-solid fa-eye position-absolute pw-toggle-icon" onclick="togglePassword('setupPw', this)"></i>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-danger w-100 py-3 fs-5 rounded-3 shadow-sm fw-bold"><i class="fa-solid fa-lock me-2"></i>保存设定并解除封印</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
