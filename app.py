@@ -12,10 +12,18 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
-app.secret_key = 'YOUR_SECRET_KEY_HERE'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///manager.db'
+app.secret_key = 'nexus_export_2026'
+
+# ==========================================
+# 🚀 核心修复一：绝对路径锁定与防锁死机制
+# ==========================================
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'manager.db')
+# 添加 timeout=20，防止高并发时 SQLite 瞬间报错锁死
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_PATH}?timeout=20'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = 'static/avatars'
+app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static/avatars')
+
 db.init_app(app)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -49,9 +57,10 @@ def init_defaults():
         db.session.add(Category(name='精选枢纽'))
     db.session.commit()
 
-with app.app_context():
-    db.create_all()
-    init_defaults()
+# ==========================================
+# 🚀 核心修复二：移除全局的 db.create_all()
+# （原代码在此处直接建表，已被移至底部 if __name__ 中）
+# ==========================================
 
 def update_site_status(site):
     try:
@@ -119,9 +128,11 @@ def system_background_tasks(app):
         for site in sites:
             perform_auto_fetch(site.id)
 
-scheduler = BackgroundScheduler()
-scheduler.add_job(func=system_background_tasks, args=[app], trigger="interval", minutes=10)
-scheduler.start()
+# 确保在 Gunicorn 环境中只有单个主进程执行调度任务
+if not os.environ.get('WERKZEUG_RUN_MAIN') or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(func=system_background_tasks, args=[app], trigger="interval", minutes=10)
+    scheduler.start()
 
 @app.before_request
 def enforce_first_setup():
@@ -246,20 +257,15 @@ def switch_view():
 @login_required
 def dashboard():
     role = session.get('user_role')
-    
-    # 用户视图逻辑
     if session.get('view_mode', role) == 'user':
         user = db.session.get(User, session['user_id'])
         sites = [sub.site for sub in user.subscriptions]
         updates = SiteUpdate.query.filter(SiteUpdate.site_id.in_([s.id for s in sites])).order_by(SiteUpdate.created_at.desc()).limit(15).all()
         return render_template('user_dashboard.html', user=user, sites=sites, updates=updates, real_role=role)
     
-    # 🍎 管理员视图逻辑（核心隔离层）
     if role == 'superadmin':
-        # 超管能看到所有人（包含其他超管、普通管理员和普通用户）
         users_list = User.query.all()
     else:
-        # 普通管理员严格屏蔽所有超管信息，防止越权窥探
         users_list = User.query.filter(User.role != 'superadmin').all()
         
     return render_template('admin.html', categories=Category.query.all(), sites=Site.query.all(), users=users_list, current_role=role)
@@ -387,5 +393,11 @@ def change_user_password(user_id):
         flash(f'已强制更新 {target.username} 的安全密钥。', 'success')
     return redirect(url_for('dashboard'))
 
+# ==========================================
+# 🚀 核心修复三：只有手动运行时才执行初始化
+# ==========================================
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        init_defaults()
     app.run(host='0.0.0.0', port=5000, debug=False)
