@@ -1,6 +1,6 @@
-<h2>Nexus - Matrix Site Management System</h2>
+# Nexus - Matrix Site Management System
 
-<a href="#english">English</a> | <a href="#中文版">中文版</a>
+[English](#english) | [中文版](#中文版)
 
 ------
 
