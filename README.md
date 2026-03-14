@@ -154,9 +154,3 @@ chmod +x install.sh
 systemctl stop nexus; systemctl disable nexus; rm -f /etc/systemd/system/nexus.service; systemctl daemon-reload; rm -f /etc/nginx/sites-available/nexus /etc/nginx/sites-enabled/nexus; systemctl restart nginx; rm -rf /root/site_manager
 
 ```
-
-```
-**💡 开源小贴士：**
-这段代码开头加入了动态的徽章（Badges），比如最新的 Release 版本号、收到的 Star 数量等。把它推送到 GitHub 后，这些小图标会自动点亮，整个项目看起来绝对是非常地道的开源作品了！需要我指导你如何在 GitHub 仓库里设置展示这些徽章吗？
-
-```
