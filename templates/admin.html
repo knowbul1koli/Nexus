@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+    .table-symmetric th:not(:first-child), .table-symmetric td:not(:first-child) { text-align: center !important; vertical-align: middle !important; }
+    .table-symmetric th:first-child, .table-symmetric td:first-child { vertical-align: middle !important; }
+    .accordion-button:not(.collapsed) { background-color: rgba(var(--theme-primary-rgb, 37, 99, 235), 0.05) !important; color: var(--primary) !important; box-shadow: none !important; }
+    .accordion-button:focus { border-color: transparent !important; box-shadow: none !important; }
+    .cat-site-list { max-height: 380px; overflow-y: auto; }
+    .cat-site-list::-webkit-scrollbar { width: 4px; }
+    .cat-site-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
+    html[data-theme="dark"] .cat-site-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
+    
+    .circle-btn {
+        display: inline-flex !important; align-items: center !important; justify-content: center !important;
+        width: 36px !important; height: 36px !important; padding: 0 !important; border-radius: 50% !important;
+        background-color: rgba(0, 0, 0, 0.04); border: 1px solid rgba(0, 0, 0, 0.08);
+        transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1); text-decoration: none; cursor: pointer;
+    }
+    html[data-theme="dark"] .circle-btn { background-color: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.15); }
+    .circle-btn:hover { transform: translateY(-2px); background-color: var(--primary); color: white !important; border-color: var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+    html[data-theme="dark"] .circle-btn:hover { box-shadow: 0 4px 10px rgba(255,255,255,0.15); }
+    .circle-btn-danger:hover { background-color: #dc3545 !important; border-color: #dc3545 !important; }
+</style>
+
+<div class="row position-relative z-3">
+    <div class="col-lg-4 mb-4">
+        <div class="surface-card-static p-3 p-md-4 h-100 border-0">
+            <h5 class="fw-bold text-secondary-custom mb-4"><i class="fa-solid fa-folder-tree text-primary-custom me-2"></i>分支生态管理</h5>
+            <form action="/admin/add_category" method="POST" class="d-flex mb-4">
+                <input type="text" name="name" class="form-control me-2 border-0" placeholder="输入新分支名称" required>
+                <button type="submit" class="btn btn-theme-secondary px-3"><i class="fa-solid fa-plus"></i></button>
+            </form>
+            <div class="accordion accordion-flush border-top border-light pt-2" id="categoryAccordion">
+                {% for cat in categories %}
+                <div class="accordion-item bg-transparent border-bottom border-light">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-transparent text-secondary-custom fw-bold px-1 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#cat-{{ cat.id }}">{{ cat.name }} <span class="badge-soft ms-auto">{{ cat.sites|length }} 节点</span></button>
+                    </h2>
+                    <div id="cat-{{ cat.id }}" class="accordion-collapse collapse" data-bs-parent="#categoryAccordion">
+                        <div class="accordion-body px-1 py-2">
+                            <div class="cat-site-list pe-2 mb-3">
+                                {% for site in cat.sites %}
+                                <div class="d-flex align-items-center justify-content-between p-2 border-bottom border-light" style="font-size: 0.9rem;">
+                                    <a href="/site/{{ site.id }}" target="_blank" class="text-decoration-none text-secondary-custom text-truncate" style="max-width: 150px;"><img src="{{ site.icon_url or 'https://via.placeholder.com/20' }}" class="rounded-circle me-2 border border-light" style="width:20px;height:20px;object-fit:cover;">{{ site.name }}</a>
+                                    {% if site.status == 'online' %}<i class="fa-solid fa-circle text-success" style="font-size:0.5rem;"></i>{% else %}<i class="fa-solid fa-circle text-danger" style="font-size:0.5rem;"></i>{% endif %}
+                                </div>
+                                {% else %}<div class="text-muted text-center py-3 small">暂无节点</div>{% endfor %}
+                            </div>
+                            <a href="/admin/delete_category/{{ cat.id }}" class="btn btn-sm btn-outline-danger w-100 rounded-pill" onclick="return confirm('警告：删除分支将彻底清空旗下所有节点！确定吗？')"><i class="fa-solid fa-trash-can me-1"></i>销毁分支</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="surface-card-static mb-4 overflow-hidden border-0">
+            <div class="d-flex flex-wrap justify-content-between align-items-center p-3 p-md-4 border-bottom border-light gap-2">
+                <h5 class="mb-0 fw-bold text-secondary-custom"><i class="fa-solid fa-server text-primary-custom me-2"></i>节点调度阵列</h5>
+                <button class="btn btn-sm btn-theme-primary px-3 px-md-4 py-2 rounded-pill shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#addSiteModal"><i class="fa-solid fa-plus me-1"></i>部署节点</button>
+            </div>
+            <div class="table-responsive p-0" style="max-height: 450px; overflow-y: auto;">
+                <table class="table table-hover table-symmetric align-middle mb-0 bg-transparent text-secondary-custom border-light text-nowrap" style="min-width: 850px;">
+                    <thead style="background: var(--surface); position: sticky; top: 0; z-index: 10;"><tr><th class="ps-3 ps-md-4 py-3 text-start border-light">节点标识</th><th class="py-3 border-light">网络探针</th><th class="py-3 border-light">强制覆写</th><th class="py-3 border-light">指令操作</th></tr></thead>
+                    <tbody>
+                        {% for site in sites %}
+                        <tr>
+                            <td class="fw-bold ps-3 ps-md-4 text-start border-light"><span class="badge-soft me-2 fw-normal">{{ site.category.name }}</span><a href="/site/{{ site.id }}" target="_blank" class="text-decoration-none text-secondary-custom">{{ site.name }}</a></td>
+                            <td class="border-light">{% if site.status == 'online' %}<span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1">Online</span>{% else %}<span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1">Offline</span>{% endif %}</td>
+                            <td class="border-light">
+                                <form action="/admin/set_status/{{ site.id }}" method="POST" class="d-flex justify-content-center align-items-center"><select name="status" class="form-select form-select-sm me-2 border-0 fw-bold" style="width: 110px;" onchange="this.form.submit()"><option value="online" {% if site.status == 'online' %}selected{% endif %}>Online</option><option value="offline" {% if site.status == 'offline' %}selected{% endif %}>Offline</option></select></form>
+                            </td>
+                            <td class="border-light">
+                                <div class="d-flex justify-content-center gap-2 flex-nowrap">
+                                    <button type="button" class="text-secondary-custom circle-btn" data-bs-toggle="modal" data-bs-target="#editSiteModal{{ site.id }}" title="修改节点"><i class="fa-solid fa-pen"></i></button>
+                                    <button type="button" class="text-secondary-custom circle-btn" data-bs-toggle="modal" data-bs-target="#updateModal{{ site.id }}" title="手动广播"><i class="fa-solid fa-bullhorn"></i></button>
+                                    <form action="/admin/auto_fetch/{{ site.id }}" method="POST" class="d-inline m-0 p-0"><button type="submit" class="text-primary-custom circle-btn" title="智能侦测"><i class="fa-solid fa-spider"></i></button></form>
+                                    <a href="/admin/delete_site/{{ site.id }}" class="text-danger circle-btn circle-btn-danger" title="销毁节点" onclick="return confirm('确定要销毁该节点吗？')"><i class="fa-solid fa-trash-can"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="surface-card-static overflow-hidden border-0">
+            <div class="d-flex flex-wrap justify-content-between align-items-center p-3 p-md-4 border-bottom border-light gap-2">
+                <h5 class="mb-0 fw-bold text-secondary-custom"><i class="fa-solid fa-users-gear text-primary-custom me-2"></i>权限干涉区</h5>
+                <button class="btn btn-sm btn-theme-secondary px-3 px-md-4 py-2 rounded-pill shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#addUserModal"><i class="fa-solid fa-user-plus me-1"></i>分配人员</button>
+            </div>
+            <div class="table-responsive p-0" style="max-height: 350px; overflow-y: auto;">
+                <table class="table table-hover table-symmetric align-middle mb-0 text-secondary-custom bg-transparent border-light text-nowrap" style="min-width: 800px;">
+                    <thead style="background: var(--surface); position: sticky; top: 0; z-index: 10;"><tr><th class="ps-3 ps-md-4 py-3 text-start border-light">账号档案</th>{% if current_role == 'superadmin' %}<th class="py-3 border-light">安全密码 (超管特权)</th>{% endif %}<th class="py-3 border-light">访问级</th><th class="py-3 border-light">执行裁决</th></tr></thead>
+                    <tbody>
+                        {% for user in users %}
+                        {% set hex_color = g_settings.primary_color | replace('#', '') %}
+                        {% set u_avatar = url_for('static', filename='avatars/' + user.avatar) if user.avatar != 'default.png' else 'https://ui-avatars.com/api/?name=' + (user.alias or user.username) + '&background=' + hex_color + '&color=fff&bold=true' %}
+                        <tr>
+                            <td class="fw-bold ps-3 ps-md-4 py-3 text-start border-light">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ u_avatar }}" class="rounded-circle me-3 shadow-sm border border-light flex-shrink-0" style="width:36px; height:36px; object-fit:cover;">
+                                    <div>{{ user.alias if user.alias else user.username }} <small class="text-muted fw-normal ms-1">(@{{ user.username }})</small><div class="text-muted fw-normal small" style="font-size: 0.8rem;">{{ user.email }}</div></div>
+                                </div>
+                            </td>
+                            {% if current_role == 'superadmin' %}
+                            <td class="border-light text-center">
+                                <div class="d-inline-flex align-items-center justify-content-between rounded-pill px-3 py-1 border border-light badge-soft" style="min-width: 120px;">
+                                    <span class="font-monospace me-2 text-muted" data-pw="{{ user.password }}" style="font-size: 0.85rem; letter-spacing: 2px;">••••••••</span>
+                                    <i class="fa-solid fa-eye text-muted toggle-admin-pw" onclick="toggleAdminPw(this)" style="cursor: pointer; font-size: 0.9rem;"></i>
+                                </div>
+                            </td>
+                            {% endif %}
+                            <td class="border-light">
+                                {% if current_role == 'superadmin' and user.role != 'superadmin' %}
+                                    <form action="/admin/set_role/{{ user.id }}" method="POST" class="d-flex justify-content-center"><select name="role" class="form-select form-select-sm border-0 fw-bold text-secondary-custom text-center" style="width: 120px;" onchange="this.form.submit()"><option value="user" {% if user.role == 'user' %}selected{% endif %}>User 级</option><option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin 级</option></select></form>
+                                {% else %}
+                                    {% if user.role == 'superadmin' %} <span class="badge bg-dark px-3 py-2 rounded-pill">SuperAdmin</span>
+                                    {% elif user.role == 'admin' %} <span class="badge bg-secondary px-3 py-2 rounded-pill">Admin</span>
+                                    {% else %} <span class="badge-soft px-3 py-1">User</span>{% endif %}
+                                {% endif %}
+                            </td>
+                            <td class="border-light">
+                                <div class="d-flex justify-content-center gap-2 align-items-center">
+                                    {% if user.id == session.get('user_id') %}
+                                        <span class="badge-soft px-3 py-2 text-primary-custom border-0"><i class="fa-solid fa-street-view me-1"></i>当前终端</span>
+                                    {% elif current_role == 'superadmin' or (current_role == 'admin' and user.role == 'user') %}
+                                        {% if current_role == 'superadmin' %}<button type="button" class="text-secondary-custom circle-btn" data-bs-toggle="modal" data-bs-target="#editUserPwModal{{ user.id }}" title="强制修改密码"><i class="fa-solid fa-key"></i></button>{% endif %}
+                                        <a href="/admin/delete_user/{{ user.id }}" class="text-danger circle-btn circle-btn-danger" onclick="return confirm('确定要遣散该人员吗？')"><i class="fa-solid fa-user-xmark"></i></a>
+                                    {% else %}<span class="text-muted small"><i class="fa-solid fa-ban me-1"></i>受限</span>{% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<div class="modal fade" id="addSiteModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><form action="/admin/add_site" method="POST" class="modal-content surface-card border-0 p-2"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold text-secondary-custom fs-4">部署新节点</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><label class="small fw-bold text-muted mb-2">选择归属分支</label><select name="category_id" class="form-select mb-4 border-0 py-2" required><option value="">-- 请选择 --</option>{% for cat in categories %}<option value="{{ cat.id }}">{{ cat.name }}</option>{% endfor %}</select><input type="text" name="name" class="form-control mb-3 border-0 py-2" required placeholder="节点标识 (如：核心服务器)"><input type="url" name="url" class="form-control mb-3 border-0 py-2" required placeholder="目标 URL (含 http/https)"><input type="url" name="icon_url" class="form-control mb-3 border-0 py-2" placeholder="图标 URL (选填, 系统会自动抓取)"><textarea name="description" class="form-control mb-3 border-0 p-3" rows="3" placeholder="节点简报..."></textarea></div><div class="modal-footer border-0 pt-0"><button type="submit" class="btn btn-theme-primary w-100 py-3 rounded-pill fs-6 shadow-sm">确认部署执行</button></div></form></div></div>
+<div class="modal fade" id="addUserModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><form action="/admin/add_user" method="POST" class="modal-content surface-card border-0 p-2"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold text-secondary-custom fs-4">分配新人员</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><input type="email" name="email" class="form-control mb-3 border-0 py-3" required placeholder="电子邮箱"><input type="text" name="username" class="form-control mb-3 border-0 py-3" required placeholder="专家代号"><div class="position-relative mb-4"><input type="password" id="addUserPw" name="password" class="form-control border-0 py-3 pe-5" required placeholder="初始接入密钥"><i class="fa-solid fa-eye position-absolute pw-toggle-icon" onclick="togglePassword('addUserPw', this)"></i></div><label class="small fw-bold text-muted mb-2">授予访问级</label><select name="role" class="form-select border-0 py-2"><option value="user">User 级</option>{% if current_role == 'superadmin' %}<option value="admin">Admin 级</option>{% endif %}</select></div><div class="modal-footer border-0 pt-0"><button type="submit" class="btn btn-theme-secondary w-100 py-3 rounded-pill fs-6 shadow-sm">授权并录入</button></div></form></div></div>
+
+{% for site in sites %}
+<div class="modal fade" id="editSiteModal{{ site.id }}" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><form action="/admin/edit_site/{{ site.id }}" method="POST" class="modal-content surface-card border-0 p-2"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold text-secondary-custom fs-4">修改节点属性</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><label class="small fw-bold text-muted mb-2">更改归属分支</label><select name="category_id" class="form-select mb-4 border-0 py-2" required>{% for cat in categories %}<option value="{{ cat.id }}" {% if site.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>{% endfor %}</select><label class="small fw-bold text-muted mb-1">节点标识</label><input type="text" name="name" class="form-control mb-3 border-0 py-2" value="{{ site.name }}" required><label class="small fw-bold text-muted mb-1">目标 URL</label><input type="url" name="url" class="form-control mb-3 border-0 py-2" value="{{ site.url }}" required><label class="small fw-bold text-muted mb-1">图标 URL</label><input type="url" name="icon_url" class="form-control mb-3 border-0 py-2" value="{{ site.icon_url }}"><label class="small fw-bold text-muted mb-1">节点简报</label><textarea name="description" class="form-control mb-3 border-0 p-3" rows="3">{{ site.description }}</textarea></div><div class="modal-footer border-0 pt-0"><button type="submit" class="btn btn-theme-primary w-100 py-3 rounded-pill fs-6 shadow-sm">保存修改</button></div></form></div></div>
+<div class="modal fade" id="updateModal{{ site.id }}" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><form action="/admin/add_update/{{ site.id }}" method="POST" class="modal-content surface-card border-0 p-2"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold text-secondary-custom fs-4">系统广播</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><p class="text-muted small mb-3">目标节点：<span class="badge-soft px-3 py-2 text-primary-custom">{{ site.name }}</span></p><textarea name="content" class="form-control border-0 p-3" rows="4" required placeholder="输入你要向订阅者发送的详细内容..."></textarea></div><div class="modal-footer border-0 pt-0"><button type="submit" class="btn btn-theme-primary w-100 py-3 rounded-pill fs-6 shadow-sm">立即发射广播</button></div></form></div></div>
+{% endfor %}
+
+{% if current_role == 'superadmin' %}
+    {% for user in users %}
+    <div class="modal fade" id="editUserPwModal{{ user.id }}" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><form action="/admin/change_user_password/{{ user.id }}" method="POST" class="modal-content surface-card border-0 p-2"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold text-danger fs-4"><i class="fa-solid fa-key me-2"></i>强制更新密钥</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><p class="text-muted small mb-4 lh-lg">正在为 <strong class="text-primary-custom">@{{ user.username }}</strong> 签发新的安全密钥。<br>注意：此操作将立即覆盖对方的原有凭证。</p><div class="position-relative mb-2"><input type="password" id="changePw{{ user.id }}" name="new_password" class="form-control border-0 py-3 pe-5" required placeholder="输入新的安全密钥"><i class="fa-solid fa-eye position-absolute pw-toggle-icon" onclick="togglePassword('changePw{{ user.id }}', this)"></i></div></div><div class="modal-footer border-0 pt-0"><button type="submit" class="btn btn-danger w-100 py-3 rounded-pill fs-6 shadow-sm fw-bold">强制签发执行</button></div></form></div></div>
+    {% endfor %}
+{% endif %}
+
+<script>
+    function toggleAdminPw(icon) {
+        const span = icon.previousElementSibling;
+        if (span.textContent === '••••••••') {
+            span.textContent = span.getAttribute('data-pw');
+            span.style.letterSpacing = '0px';
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
+            icon.classList.add('text-primary-custom');
+        } else {
+            span.textContent = '••••••••';
+            span.style.letterSpacing = '2px';
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
+            icon.classList.remove('text-primary-custom');
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-4 position-relative">
+    <nav aria-label="breadcrumb"><ol class="breadcrumb hero-text"><li class="breadcrumb-item"><a href="/" class="text-muted text-decoration-none fw-bold">首页</a></li><li class="breadcrumb-item"><a href="/category/{{ site.category.id }}" class="text-muted text-decoration-none fw-bold">{{ site.category.name }}</a></li><li class="breadcrumb-item active fw-bold text-primary-custom" aria-current="page">{{ site.name }}</li></ol></nav>
+</div>
+<div class="surface-card-static p-4 p-md-5 mb-5 border-0 shadow-sm position-relative z-3">
+    <div class="row align-items-center">
+        <div class="col-md-auto text-center mb-4 mb-md-0"><img src="{{ site.icon_url or 'https://via.placeholder.com/120' }}" class="rounded-circle shadow-sm border border-light" style="width:120px;height:120px;object-fit:cover;"></div>
+        <div class="col-md text-center text-md-start">
+            <h2 class="fw-bold text-secondary-custom mb-3 d-flex flex-column flex-md-row align-items-center justify-content-center justify-content-md-start">
+                {{ site.name }}
+                {% if site.status == 'online' %}<span class="badge bg-success bg-opacity-10 text-success fs-6 ms-md-3 mt-2 mt-md-0 px-3 py-2 rounded-pill fw-bold border border-success border-opacity-25"><i class="fa-solid fa-circle me-1" style="font-size:0.6rem;"></i> Online</span>
+                {% else %}<span class="badge bg-danger bg-opacity-10 text-danger fs-6 ms-md-3 mt-2 mt-md-0 px-3 py-2 rounded-pill fw-bold border border-danger border-opacity-25"><i class="fa-solid fa-circle me-1" style="font-size:0.6rem;"></i> Offline</span>{% endif %}
+            </h2>
+            <div class="d-flex justify-content-center justify-content-md-start align-items-center mb-4 gap-3">
+                <span class="badge-soft">{{ site.category.name }}</span>
+                <span class="text-muted fw-bold small"><i class="fa-solid fa-users text-primary-custom me-1" style="opacity: 0.8;"></i>{{ site.subscribers|length }} 人已追踪</span>
+            </div>
+            <p class="fs-6 fs-md-5 mb-4 text-secondary-custom px-3 px-md-0" style="opacity: 0.8; line-height: 1.6;">{{ site.description }}</p>
+            <div class="d-flex flex-column flex-sm-row justify-content-center justify-content-md-start gap-3">
+                <a href="{{ site.url }}" target="_blank" class="btn btn-theme-secondary px-5 py-2 rounded-pill fs-6 shadow-sm"><i class="fa-solid fa-rocket me-2"></i>访问源站</a>
+                {% if session.get('user_id') %}
+                    <a href="/toggle_subscribe/{{ site.id }}" class="btn {% if is_subscribed %}btn-outline-danger{% else %}btn-theme-primary{% endif %} px-5 py-2 rounded-pill fs-6 shadow-sm">{% if is_subscribed %}<i class="fa-solid fa-link-slash me-2"></i>取消订阅{% else %}<i class="fa-solid fa-link me-2"></i>订阅追踪{% endif %}</a>
+                {% else %}<a href="/login" class="btn border fw-bold px-4 py-2 rounded-pill text-secondary-custom" style="background: rgba(0,0,0,0.03);"><i class="fa-solid fa-lock me-2"></i>登录以订阅动态</a>{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+<h4 class="fw-bold text-secondary-custom mb-4 px-2 hero-text"><i class="fa-solid fa-satellite-dish text-primary-custom me-2"></i>捕获动态</h4>
+<div class="surface-card-static overflow-hidden border-0 shadow-sm position-relative z-3">
+    <div class="list-group list-group-flush">
+        {% for update in site.updates|reverse %}
+        <div class="list-group-item bg-transparent border-bottom border-light py-4 px-4 px-md-5">
+            <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center mb-2">
+                {% if update.is_broadcast %}<span class="text-primary-custom fw-bold fs-5 mb-2 mb-md-0"><i class="fa-solid fa-bullhorn me-2"></i>{{ update.article_title }}</span>
+                {% else %}<a href="{{ update.article_url }}" target="_blank" class="text-decoration-none text-primary-custom fw-bold fs-5 title-hover mb-2 mb-md-0"><i class="fa-solid fa-file-lines me-2"></i>{{ update.article_title }}</a>{% endif %}
+                <small class="text-muted fw-bold"><i class="fa-regular fa-clock me-1"></i>{{ update.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+            </div>
+            {% if update.content %}<p class="mb-0 text-secondary-custom fs-6 mt-2" style="opacity: 0.85; line-height: 1.6;">{{ update.content }}</p>{% endif %}
+        </div>
+        {% else %}<div class="list-group-item bg-transparent text-center py-5 text-muted fw-bold border-0">该节点暂未发射任何信号</div>{% endfor %}
+    </div>
+</div>
+<style>.title-hover:hover { text-decoration: underline !important; filter: brightness(1.1); }</style>
+{% endblock %}

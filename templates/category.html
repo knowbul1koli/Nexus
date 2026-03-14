@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-5 position-relative">
+    <nav aria-label="breadcrumb"><ol class="breadcrumb hero-text"><li class="breadcrumb-item"><a href="/" class="text-muted text-decoration-none fw-bold">首页</a></li><li class="breadcrumb-item active fw-bold text-primary-custom" aria-current="page">{{ category.name }}</li></ol></nav>
+    <h2 class="text-secondary-custom mb-2 hero-text" style="font-size: 2.5rem;">分支: <span class="text-primary-custom">{{ category.name }}</span></h2>
+    <p class="text-muted mb-5 fs-5 fw-bold hero-text">此分支下分配的所有可用节点。</p>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 position-relative z-3">
+        {% for site in category.sites %}
+        <div class="col">
+            <a href="/site/{{ site.id }}" class="text-decoration-none">
+                <div class="surface-card p-4 text-center h-100 d-flex flex-column justify-content-center align-items-center">
+                    <img src="{{ site.icon_url or 'https://via.placeholder.com/80' }}" class="rounded-circle mb-3 shadow-sm border border-light" style="width:75px;height:75px;object-fit:cover;">
+                    <h5 class="text-secondary-custom mb-1 fs-5">{{ site.name }}</h5>
+                    <span class="text-muted small fw-bold mb-4"><i class="fa-solid fa-fire text-primary-custom me-1" style="opacity: 0.8;"></i>{{ site.subscribers|length }} 人追踪</span>
+                    <div class="mt-auto w-100">
+                        {% if site.status == 'online' %}<div class="badge bg-success bg-opacity-10 text-success rounded-pill py-2 w-100 fw-bold border border-success border-opacity-25"><i class="fa-solid fa-circle me-1" style="font-size:0.6rem;"></i> 运行中</div>
+                        {% else %}<div class="badge bg-danger bg-opacity-10 text-danger rounded-pill py-2 w-100 fw-bold border border-danger border-opacity-25"><i class="fa-solid fa-circle me-1" style="font-size:0.6rem;"></i> 离线</div>{% endif %}
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% else %}
+        <div class="col-12 text-center py-5 w-100 hero-text"><i class="fa-solid fa-folder-open text-muted opacity-50 mb-3" style="font-size: 3rem;"></i><p class="text-muted fw-bold fs-5">该分支下暂未分配任何站点。</p></div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-center align-items-center w-100 position-relative z-3" style="min-height: 75vh;">
+    <div class="surface-card-static p-4 p-md-5 mx-3" style="width: 100%; max-width: 450px;">
+        <div class="text-center mb-5">
+            <div class="surface-card rounded-circle d-inline-flex justify-content-center align-items-center mb-3" style="width: 65px; height: 65px;"><i class="fa-solid fa-id-card-clip text-primary-custom fs-3"></i></div>
+            <h3 class="fw-bold text-secondary-custom">注册账户</h3>
+            <p class="text-muted small">建立您的专家档案与安全凭证</p>
+        </div>
+        <form method="POST" action="/register">
+            <div class="mb-4"><label class="form-label fw-bold text-secondary-custom small ms-1">电子邮箱 (必填)</label><input type="email" name="email" class="form-control form-control-lg" required placeholder="支持常用及域名邮箱"></div>
+            <div class="mb-4"><label class="form-label fw-bold text-secondary-custom small ms-1">站点专家代号</label><input type="text" name="username" class="form-control form-control-lg" required placeholder="系统内的唯一代号"></div>
+            <div class="mb-5">
+                <label class="form-label fw-bold text-secondary-custom small ms-1">设置密码</label>
+                <div class="position-relative">
+                    <input type="password" id="regPw" name="password" class="form-control form-control-lg pe-5" required placeholder="设置安全密码">
+                    <i class="fa-solid fa-eye position-absolute pw-toggle-icon" onclick="togglePassword('regPw', this)"></i>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-theme-secondary w-100 py-3 fs-5 rounded-3 shadow-sm">完成注册</button>
+        </form>
+        <div class="text-center mt-4"><span class="text-muted small">已有账户？</span> <a href="/login" class="text-decoration-none fw-bold text-primary-custom">返回登录</a></div>
+    </div>
+</div>
+{% endblock %}

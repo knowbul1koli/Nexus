@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-5 position-relative">
+    <h2 class="text-secondary-custom mb-2 hero-text" style="font-size: 2.8rem; letter-spacing: 1px;">探索 <span class="text-primary-custom">发现</span></h2>
+    <p class="text-muted mb-5 fs-5 hero-text fw-bold">浏览所有的系统精选节点与服务。</p>
+    {% for category in categories %}
+        {% if category.sites %}
+        <div class="mb-5 position-relative z-3">
+            <h5 class="text-secondary-custom mb-4 d-flex align-items-center"><span class="surface-card-static rounded p-2 me-3 d-inline-flex align-items-center justify-content-center border-0 shadow-sm" style="width:35px;height:35px;"><i class="fa-solid fa-layer-group text-primary-custom fs-6"></i></span>{{ category.name }}</h5>
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+                {% for site in category.sites %}
+                <div class="col">
+                    <a href="/site/{{ site.id }}" class="text-decoration-none">
+                        <div class="surface-card p-4 text-center h-100 d-flex flex-column justify-content-center align-items-center">
+                            <img src="{{ site.icon_url or 'https://via.placeholder.com/80' }}" class="rounded-circle mb-3 shadow-sm border border-light" style="width:75px;height:75px;object-fit:cover;">
+                            <h5 class="text-secondary-custom mb-1 fs-5">{{ site.name }}</h5>
+                            <span class="text-muted small fw-bold mb-4"><i class="fa-solid fa-fire text-primary-custom me-1" style="opacity: 0.8;"></i>{{ site.subscribers|length }} 人追踪</span>
+                            <div class="mt-auto w-100">
+                                {% if site.status == 'online' %}<div class="badge bg-success bg-opacity-10 text-success rounded-pill py-2 w-100 fw-bold border border-success border-opacity-25"><i class="fa-solid fa-circle me-1" style="font-size:0.6rem;"></i> 运行中</div>
+                                {% else %}<div class="badge bg-danger bg-opacity-10 text-danger rounded-pill py-2 w-100 fw-bold border border-danger border-opacity-25"><i class="fa-solid fa-circle me-1" style="font-size:0.6rem;"></i> 离线</div>{% endif %}
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5 position-relative z-3"><i class="fa-solid fa-satellite text-muted opacity-50 mb-3 hero-text" style="font-size: 3rem;"></i><h4 class="text-muted fw-bold hero-text">宇宙的尽头，暂无信号</h4></div>
+    {% endfor %}
+</div>
+{% endblock %}

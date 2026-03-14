@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-end mb-5 position-relative z-3">
+    <div>
+        <h2 class="fw-bold text-secondary-custom mb-2"><i class="fa-solid fa-bookmark text-primary-custom me-2"></i>我的追踪雷达</h2>
+        <p class="text-muted m-0">在这里管理你所有订阅的高价值节点。</p>
+    </div>
+    <span class="badge-soft">{{ sites|length }} 个已连接</span>
+</div>
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 position-relative z-3">
+    {% for site in sites %}
+    <div class="col">
+        <a href="/site/{{ site.id }}" class="text-decoration-none">
+            <div class="surface-card p-4 text-center h-100 d-flex flex-column align-items-center">
+                <img src="{{ site.icon_url or 'https://via.placeholder.com/80' }}" class="rounded-circle mx-auto mb-4 shadow-sm border border-light" style="width:80px;height:80px;object-fit:cover;">
+                <h5 class="fw-bold text-secondary-custom mb-1">{{ site.name }}</h5>
+                <span class="text-muted small fw-bold mb-4"><i class="fa-solid fa-users text-primary-custom me-1" style="opacity:0.8;"></i>{{ site.subscribers|length }} 人追踪</span>
+                <div class="mt-auto w-100">
+                    {% if site.status == 'online' %}<div class="badge bg-success bg-opacity-10 text-success rounded-pill py-2 w-100 fw-bold border border-success border-opacity-25"><i class="fa-solid fa-circle me-1" style="font-size:0.6rem;"></i> Online</div>
+                    {% else %}<div class="badge bg-danger bg-opacity-10 text-danger rounded-pill py-2 w-100 fw-bold border border-danger border-opacity-25"><i class="fa-solid fa-circle me-1" style="font-size:0.6rem;"></i> Offline</div>{% endif %}
+                </div>
+            </div>
+        </a>
+    </div>
+    {% else %}
+    <div class="col-12 text-center py-5 w-100 mt-5">
+        <div class="surface-card shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-4 border-0" style="width: 100px; height: 100px;"><i class="fa-solid fa-box-open fs-1 text-primary-custom opacity-75"></i></div>
+        <h4 class="text-secondary-custom fw-bold">雷达库空空如也</h4>
+        <p class="text-muted mb-4">快去探索分支发现有趣的内容吧！</p>
+        <a href="/" class="btn btn-theme-primary px-5 py-2 rounded-pill shadow-sm">去探索</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
