@@ -1,18 +1,19 @@
-# Python 缓存与环境
+# Python 缓存与环境 
 __pycache__/
 *.py[cod]
 *$py.class
 venv/
 env/
 
-# 私密数据库 (绝不能传上去)
+# 私密数据库与动态密钥 (绝不能传上去)
 manager.db
+.secret_key
 instance/
 
-# 用户上传的图片 (保留目录结构，但不传图片)
+# 用户上传的图片 (保留目录结构，但不传图片) 
 static/avatars/*
 !static/avatars/.gitkeep
 
-build/ #临时编译文件夹
-dist/  #临时编译文件夹
-*.spec #打包的配置文件
+build/ #临时编译文件夹 
+dist/  #临时编译文件夹 
+*.spec #打包的配置文件 

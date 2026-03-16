@@ -32,19 +32,39 @@
         .bg-dimmer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: -1; transition: background-color 0.4s ease; }
         html[data-theme="dark"] .bg-dimmer { background-color: rgba(15, 17, 21, 0.85); }
         .surface-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-soft); border: 1px solid var(--border-light); transition: var(--transition); }
+        /* 恢复：卡片悬停上浮与阴影强化 */
         .surface-card:hover { transform: translateY(-4px); box-shadow: 0 20px 50px rgba(0,0,0,calc(var(--shadow-op) + 0.1)); border-color: rgba(var(--theme-primary-rgb, 37, 99, 235), 0.3); }
+        
         .surface-card-static { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-soft); border: 1px solid var(--border-light); }
         .badge-soft { display: inline-block; padding: 0.4em 0.8em; font-size: 0.85em; font-weight: 600; text-align: center; white-space: nowrap; border-radius: 50rem; transition: var(--transition); background-color: rgba(0, 0, 0, 0.05); color: var(--text); border: 1px solid rgba(0, 0, 0, 0.08); }
         html[data-theme="dark"] .badge-soft { background-color: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.9); border: 1px solid rgba(255, 255, 255, 0.15); }
+        
+        /* 修复：绝不干涉表格悬停时的内部文字颜色，只允许改变行背景，防止账号变暗 */
         .table { --bs-table-bg: transparent; --bs-table-color: var(--text); }
         .table td, .table th { background-color: transparent !important; border-color: var(--border-light); }
         .table-hover > tbody > tr:hover > * { --bs-table-bg-state: var(--hover-bg); }
-        .btn-theme-primary { background: var(--primary); color: white; border-radius: 8px; font-weight: bold; border: none; transition: 0.2s; }
-        .btn-theme-primary:hover { filter: brightness(1.15); color: white; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        .btn-theme-secondary { background: var(--secondary); color: white; border-radius: 8px; font-weight: bold; border: none; transition: 0.2s; }
-        .btn-theme-secondary:hover { filter: brightness(1.2); color: white; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); }
+        
+        /* 终极修复：彻底锁死所有按钮在悬停时的背景和文字颜色（使用 !important），拒绝 Bootstrap 覆盖，并恢复悬停上浮特效 */
+        .btn-theme-primary { background: var(--primary) !important; color: #ffffff !important; border-radius: 8px; font-weight: bold; border: none; transition: var(--transition); }
+        .btn-theme-primary:hover, .btn-theme-primary:focus, .btn-theme-primary:active { background: var(--primary) !important; color: #ffffff !important; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important; }
+        
+        .btn-theme-secondary { background: var(--secondary) !important; color: #ffffff !important; border-radius: 8px; font-weight: bold; border: none; transition: var(--transition); }
+        .btn-theme-secondary:hover, .btn-theme-secondary:focus, .btn-theme-secondary:active { background: var(--secondary) !important; color: #ffffff !important; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.15) !important; }
+        
+        html[data-theme="dark"] .btn-theme-secondary { background: rgba(255, 255, 255, 0.08) !important; color: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; backdrop-filter: blur(10px); }
+        html[data-theme="dark"] .btn-theme-secondary:hover, html[data-theme="dark"] .btn-theme-secondary:focus { background: rgba(255, 255, 255, 0.08) !important; color: #ffffff !important; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.15) !important; }
+
+        /* 修复：红色空心按钮（如取消订阅）悬停时不改变背景，仅上浮 */
+        .btn-outline-danger { transition: var(--transition); }
+        .btn-outline-danger:hover, .btn-outline-danger:focus, .btn-outline-danger:active { background-color: transparent !important; color: #dc3545 !important; border-color: #dc3545 !important; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(220,53,69,0.2) !important; }
+
+        /* 修复：红色实心按钮（如强制签发密码）悬停时锁定颜色 */
+        .btn-danger { transition: var(--transition); }
+        .btn-danger:hover, .btn-danger:focus, .btn-danger:active { background-color: #dc3545 !important; border-color: #dc3545 !important; color: #ffffff !important; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(220,53,69,0.3) !important; }
         html[data-theme="dark"] .btn-theme-secondary { background: rgba(255, 255, 255, 0.08); color: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); }
-        html[data-theme="dark"] .btn-theme-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+        /* 修复：夜间模式悬停时背景色依然保持为 0.08，不发生变色 */
+        html[data-theme="dark"] .btn-theme-secondary:hover { background: rgba(255, 255, 255, 0.08) !important; color: #ffffff !important; transform: translateY(-2px); }
+        .circle-btn:hover { color: #ffffff !important; }
         .hero-text { text-shadow: none !important; }
         html[data-theme="dark"] .text-muted { color: #94a3b8 !important; }
         html[data-theme="dark"] .text-primary-custom { filter: brightness(1.3); }
@@ -108,9 +128,11 @@
         <i class="fa-solid fa-layer-group text-primary-custom"></i><span class="fs-4 text-primary-custom" style="font-weight: 900;">{{ g_settings.site_title }}</span>
     </div>
     <a href="/" class="sidebar-item"><i class="fa-solid fa-house"></i><span>首页</span></a>
+    
+    <a href="/dashboard" class="sidebar-item"><i class="fa-solid fa-bolt"></i><span>控制台</span></a>
+    
     <a data-bs-toggle="collapse" href="#categoryCollapse" class="sidebar-item border-0"><i class="fa-solid fa-compass"></i><span>探索分支 <i class="fa-solid fa-angle-down ms-4 text-muted" style="font-size: 0.8rem; width: auto; margin-left: 10px;"></i></span></a>
     <div class="collapse" id="categoryCollapse"><div class="sidebar-sub-menu">{% for cat in g_categories %}<a href="/category/{{ cat.id }}" class="sidebar-sub-item">{{ cat.name }}</a>{% endfor %}</div></div>
-    <a href="/dashboard" class="sidebar-item"><i class="fa-solid fa-bolt"></i><span>控制面板</span></a>
     <div class="mt-auto">
         {% if session.get('user_role') == 'superadmin' %}<a href="/admin/ui_settings" class="sidebar-item"><i class="fa-solid fa-wand-magic-sparkles"></i><span>UI 渲染引擎</span></a>{% endif %}
         {% if session.get('user_role') in ['admin', 'superadmin'] %}<a href="/switch_view" class="sidebar-item">{% if session.get('view_mode') == 'user' %}<i class="fa-solid fa-eye-slash text-success"></i><span>回到管理中心</span>{% else %}<i class="fa-solid fa-eye"></i><span>模拟用户视角</span>{% endif %}</a>{% endif %}
@@ -173,15 +195,15 @@
         mobileMenuBtn.addEventListener('click', () => { sidebar.classList.add('mobile-open'); mobileOverlay.classList.add('show'); });
         mobileOverlay.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); mobileOverlay.classList.remove('show'); });
     }
-    function togglePassword(inputId, iconElement) {
+   function togglePassword(inputId, iconElement) {
         const input = document.getElementById(inputId);
         if (input.type === "password") {
             input.type = "text";
-            iconElement.classList.replace("fa-eye", "fa-eye-slash");
+            iconElement.classList.replace("fa-eye-slash", "fa-eye");
             iconElement.classList.add("text-primary-custom");
         } else {
             input.type = "password";
-            iconElement.classList.replace("fa-eye-slash", "fa-eye");
+            iconElement.classList.replace("fa-eye", "fa-eye-slash");
             iconElement.classList.remove("text-primary-custom");
         }
     }

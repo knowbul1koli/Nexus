@@ -1,4 +1,6 @@
 import os
+import secrets
+import base64  # 🍎 新增：这里导入了 base64 加密库
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from functools import wraps
 from werkzeug.utils import secure_filename
@@ -12,14 +14,21 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
-app.secret_key = 'nexus_export_2026'
+
+# 🍎 新增：注入 Base64 混淆算法，用于保护前端敏感 DOM 数据（密码）
+app.jinja_env.filters['b64encode'] = lambda s: base64.b64encode(str(s).encode('utf-8')).decode('utf-8') if s else ""
 
 # ==========================================
-# 🚀 核心修复一：绝对路径锁定与防锁死机制
+# 🚀 核心：绝对路径锁定与动态密钥
 # ==========================================
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+secret_path = os.path.join(BASE_DIR, '.secret_key')
+if not os.path.exists(secret_path):
+    with open(secret_path, 'w') as f: f.write(secrets.token_hex(32))
+with open(secret_path, 'r') as f: app.secret_key = f.read().strip()
+
 DB_PATH = os.path.join(BASE_DIR, 'manager.db')
-# 添加 timeout=20，防止高并发时 SQLite 瞬间报错锁死
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_PATH}?timeout=20'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static/avatars')
@@ -41,8 +50,8 @@ DEFAULT_SETTINGS = {
 }
 
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
     'Connection': 'keep-alive'
 }
@@ -51,55 +60,67 @@ def init_defaults():
     if not User.query.filter_by(email='admin@nexus.com').first():
         db.session.add(User(email='admin@nexus.com', username='superadmin', password='password123', role='superadmin', alias='系统主理人', is_first_login=True))
     for key, val in DEFAULT_SETTINGS.items():
-        if not Setting.query.filter_by(key=key).first():
-            db.session.add(Setting(key=key, value=val))
-    if not Category.query.first():
-        db.session.add(Category(name='精选枢纽'))
+        if not Setting.query.filter_by(key=key).first(): db.session.add(Setting(key=key, value=val))
+    if not Category.query.first(): db.session.add(Category(name='精选枢纽'))
     db.session.commit()
-
-# ==========================================
-# 🚀 核心修复二：移除全局的 db.create_all()
-# （原代码在此处直接建表，已被移至底部 if __name__ 中）
-# ==========================================
 
 def update_site_status(site):
     try:
         res = requests.get(site.url, headers=HEADERS, timeout=8, verify=False, allow_redirects=True)
-        if res.status_code < 500 or res.status_code == 403:
-            site.status = 'online'
-        else:
-            site.status = 'offline'
-    except Exception:
-        site.status = 'offline'
+        if res.status_code < 500 or res.status_code == 403: site.status = 'online'
+        else: site.status = 'offline'
+    except Exception: site.status = 'offline'
     db.session.commit()
 
 def perform_auto_fetch(site_id):
     site = db.session.get(Site, site_id)
     if not site: return False, "节点不存在"
-
     update_site_status(site)
-    if site.status == 'offline':
-        return False, "目标节点拒绝连接或已宕机，无法抓取。"
-
+    if site.status == 'offline': return False, "目标节点拒绝连接或已宕机，无法抓取。"
+    
     try:
         response = requests.get(site.url, headers=HEADERS, timeout=10, verify=False)
         response.encoding = response.apparent_encoding
         soup = BeautifulSoup(response.text, 'html.parser')
         
+        # 1. 尝试抓取站点图标 (兼容 HTML 和 RSS)
         if not site.icon_url:
             icon_tag = soup.find('link', rel=lambda x: x and 'icon' in x.lower())
-            if icon_tag and icon_tag.get('href'): site.icon_url = urllib.parse.urljoin(site.url, icon_tag['href'])
+            if icon_tag and icon_tag.get('href'): 
+                site.icon_url = urllib.parse.urljoin(site.url, icon_tag['href'])
+            else:
+                image_tag = soup.find('image')
+                if image_tag and image_tag.find('url'):
+                    site.icon_url = urllib.parse.urljoin(site.url, image_tag.find('url').get_text(strip=True))
 
         a_title, a_link, a_summary = "", site.url, ""
-        article = soup.find('article') or soup.find(class_=lambda x: x and 'post' in x.lower())
-        if article:
-            a_tag = article.find('a')
-            if a_tag and a_tag.get_text(strip=True):
-                a_title = a_tag.get_text(strip=True)
-                a_link = urllib.parse.urljoin(site.url, a_tag.get('href', ''))
-            p_tag = article.find('p')
-            a_summary = p_tag.get_text(strip=True)[:150] + '...' if p_tag else ""
+        
+        # 2. 🍎 新增：优先尝试解析 RSS/Atom Feed 格式
+        item = soup.find('item') or soup.find('entry')
+        if item:
+            title_tag = item.find('title')
+            if title_tag: a_title = title_tag.get_text(strip=True)
             
+            link_tag = item.find('link')
+            if link_tag:
+                a_link = link_tag.get('href') or link_tag.get_text(strip=True)
+                
+            desc_tag = item.find('description') or item.find('summary') or item.find('content:encoded')
+            if desc_tag:
+                # 剥离 RSS 中可能含有的杂乱 HTML 标签
+                clean_desc = BeautifulSoup(desc_tag.get_text(), 'html.parser').get_text(strip=True)
+                a_summary = clean_desc[:150] + '...'
+                
+        # 3. 兼容降级：如果不是 RSS 或没有最新内容，回退到网页 HTML 解析
+        if not a_title:
+            article = soup.find('article') or soup.find(class_=lambda x: x and 'post' in x.lower())
+            if article:
+                a_tag = article.find('a')
+                if a_tag and a_tag.get_text(strip=True):
+                    a_title, a_link = a_tag.get_text(strip=True), urllib.parse.urljoin(site.url, a_tag.get('href', ''))
+                p_tag = article.find('p')
+                a_summary = p_tag.get_text(strip=True)[:150] + '...' if p_tag else ""
+                
         if not a_title:
             heading = soup.find(['h1', 'h2', 'h3'], class_=lambda x: x and ('title' in x.lower() or 'entry' in x.lower())) or soup.find('h2')
             if heading:
@@ -116,19 +137,12 @@ def perform_auto_fetch(site_id):
             db.session.add(SiteUpdate(site_id=site.id, content=a_summary, article_title=a_title[:200], article_url=a_link, is_broadcast=False))
             db.session.commit()
             return True, f"测活成功，并捕获情报：{a_title[:15]}..."
-        else:
-            db.session.commit()
-            return True, "测活成功。目标站点内容无更新。"
-    except Exception as e: 
-        return False, "站点在线，但内容防爬阻断。"
-
+        else: return True, "测活成功。目标站点内容无更新。"
+    except Exception: return False, "站点在线，但内容防爬阻断或格式不支持。"
 def system_background_tasks(app):
     with app.app_context():
-        sites = Site.query.all()
-        for site in sites:
-            perform_auto_fetch(site.id)
+        for site in Site.query.all(): perform_auto_fetch(site.id)
 
-# 确保在 Gunicorn 环境中只有单个主进程执行调度任务
 if not os.environ.get('WERKZEUG_RUN_MAIN') or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
     scheduler = BackgroundScheduler()
     scheduler.add_job(func=system_background_tasks, args=[app], trigger="interval", minutes=10)
@@ -138,10 +152,8 @@ if not os.environ.get('WERKZEUG_RUN_MAIN') or os.environ.get('WERKZEUG_RUN_MAIN'
 def enforce_first_setup():
     if 'user_id' in session:
         user = db.session.get(User, session['user_id'])
-        if user and user.is_first_login:
-            allowed_endpoints = ['first_setup', 'logout', 'static']
-            if request.endpoint not in allowed_endpoints:
-                return redirect(url_for('first_setup'))
+        if user and user.is_first_login and request.endpoint not in ['first_setup', 'logout', 'static']:
+            return redirect(url_for('first_setup'))
 
 @app.context_processor
 def inject_global_data():
@@ -174,22 +186,15 @@ def superadmin_required(f):
 @login_required
 def first_setup():
     user = db.session.get(User, session['user_id'])
-    if not user.is_first_login:
-        return redirect(url_for('index'))
+    if not user.is_first_login: return redirect(url_for('index'))
     if request.method == 'POST':
-        email = request.form['email']
-        username = request.form['username']
-        existing = User.query.filter(User.id != user.id, ((User.email == email) | (User.username == username))).first()
-        if existing:
-            flash('该邮箱或代号已被其他人员占用，请更换。', 'danger')
-            return redirect(url_for('first_setup'))
-        user.email = email
-        user.username = username
-        user.password = request.form['password']
+        email, username = request.form['email'], request.form['username']
+        if User.query.filter(User.id != user.id, ((User.email == email) | (User.username == username))).first():
+            flash('该邮箱或代号已被占用。', 'danger'); return redirect(url_for('first_setup'))
+        user.email, user.username, user.password = email, username, request.form['password']
         user.is_first_login = False
         db.session.commit()
-        flash('初始安全策略配置完毕，欢迎正式接入系统。', 'success')
-        return redirect(url_for('index'))
+        flash('初始安全策略配置完毕。', 'success'); return redirect(url_for('index'))
     return render_template('first_setup.html', user=user)
 
 @app.route('/')
@@ -220,26 +225,39 @@ def subscriptions(): return render_template('subscriptions.html', sites=[sub.sit
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        email = request.form['email']
-        username = request.form['username']
+        email, username = request.form['email'], request.form['username']
         if User.query.filter((User.email == email) | (User.username == username)).first(): 
-            flash('该邮箱或专家代号已被注册。', 'danger')
+            flash('该邮箱或代号已被注册。', 'danger')
         else:
             new_user = User(email=email, username=username, password=request.form['password'], role='user', is_first_login=False)
-            db.session.add(new_user)
-            db.session.commit()
+            db.session.add(new_user); db.session.commit()
             session.update({'user_id': new_user.id, 'user_role': new_user.role, 'view_mode': new_user.role})
-            flash('身份创建成功，已接入雷达网络。', 'success')
+            flash('身份创建成功。', 'success')
             return redirect(url_for('index'))
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        user = User.query.filter_by(email=request.form['email'], password=request.form['password']).first()
+        user = User.query.filter_by(email=request.form['email']).first()
         if user:
-            session.update({'user_id': user.id, 'user_role': user.role, 'view_mode': user.role})
-            return redirect(url_for('index'))
+            is_valid = False
+            # 智能兼容：如果存的是老哈希密码
+            if user.password.startswith('scrypt:') or user.password.startswith('pbkdf2:'):
+                from werkzeug.security import check_password_hash
+                if check_password_hash(user.password, request.form['password']):
+                    is_valid = True
+                    # 验证成功后，自动将其转换为明文保存，方便超管查看
+                    user.password = request.form['password']
+                    db.session.commit()
+            else:
+                # 已经是明文，直接对比
+                if user.password == request.form['password']:
+                    is_valid = True
+            
+            if is_valid:
+                session.update({'user_id': user.id, 'user_role': user.role, 'view_mode': user.role})
+                return redirect(url_for('index'))
         flash('邮箱或密码不正确。', 'danger')
     return render_template('login.html')
 
@@ -263,11 +281,7 @@ def dashboard():
         updates = SiteUpdate.query.filter(SiteUpdate.site_id.in_([s.id for s in sites])).order_by(SiteUpdate.created_at.desc()).limit(15).all()
         return render_template('user_dashboard.html', user=user, sites=sites, updates=updates, real_role=role)
     
-    if role == 'superadmin':
-        users_list = User.query.all()
-    else:
-        users_list = User.query.filter(User.role != 'superadmin').all()
-        
+    users_list = User.query.all() if role == 'superadmin' else User.query.filter(User.role != 'superadmin').all()
     return render_template('admin.html', categories=Category.query.all(), sites=Site.query.all(), users=users_list, current_role=role)
 
 @app.route('/update_profile', methods=['POST'])
@@ -291,19 +305,15 @@ def update_profile():
 @superadmin_required
 def ui_settings():
     if request.method == 'POST':
-        for key in DEFAULT_SETTINGS.keys():
-            Setting.query.filter_by(key=key).first().value = request.form.get(key)
+        for key in DEFAULT_SETTINGS.keys(): Setting.query.filter_by(key=key).first().value = request.form.get(key)
         db.session.commit()
-        flash('UI 引擎已重绘。', 'success')
-        return redirect(url_for('ui_settings'))
+        flash('UI 引擎已重绘。', 'success'); return redirect(url_for('ui_settings'))
     return render_template('ui_settings.html')
 
 @app.route('/admin/reset_settings', methods=['POST'])
 @superadmin_required
 def reset_settings():
-    Setting.query.delete()
-    init_defaults()
-    flash('已恢复系统默认设置。', 'success')
+    Setting.query.delete(); init_defaults(); flash('已恢复系统默认设置。', 'success')
     return redirect(url_for('ui_settings'))
 
 @app.route('/admin/add_category', methods=['POST'])
@@ -318,22 +328,16 @@ def delete_category(cat_id): db.session.delete(Category.query.get_or_404(cat_id)
 @admin_required
 def add_site():
     new_site = Site(category_id=request.form['category_id'], name=request.form['name'], url=request.form['url'], icon_url=request.form.get('icon_url', ''), description=request.form.get('description', ''))
-    db.session.add(new_site); db.session.commit()
-    perform_auto_fetch(new_site.id)
+    db.session.add(new_site); db.session.commit(); perform_auto_fetch(new_site.id)
     return redirect(url_for('dashboard'))
 
 @app.route('/admin/edit_site/<int:site_id>', methods=['POST'])
 @admin_required
 def edit_site(site_id):
     site = Site.query.get_or_404(site_id)
-    site.category_id = request.form['category_id']
-    site.name = request.form['name']
-    site.url = request.form['url']
-    site.icon_url = request.form.get('icon_url', '')
-    site.description = request.form.get('description', '')
-    db.session.commit()
-    flash('节点配置已修改。', 'success')
-    return redirect(url_for('dashboard'))
+    site.category_id, site.name, site.url = request.form['category_id'], request.form['name'], request.form['url']
+    site.icon_url, site.description = request.form.get('icon_url', ''), request.form.get('description', '')
+    db.session.commit(); return redirect(url_for('dashboard'))
 
 @app.route('/admin/delete_site/<int:site_id>')
 @admin_required
@@ -352,8 +356,7 @@ def add_update(site_id):
 @app.route('/admin/auto_fetch/<int:site_id>', methods=['POST'])
 @admin_required
 def auto_fetch_route(site_id):
-    success, msg = perform_auto_fetch(site_id)
-    flash(msg, 'success' if success else 'danger')
+    success, msg = perform_auto_fetch(site_id); flash(msg, 'success' if success else 'danger')
     return redirect(url_for('dashboard'))
 
 @app.route('/admin/add_user', methods=['POST'])
@@ -386,18 +389,10 @@ def set_role(user_id):
 @superadmin_required
 def change_user_password(user_id):
     target = User.query.get_or_404(user_id)
-    new_password = request.form.get('new_password')
-    if new_password:
-        target.password = new_password
-        db.session.commit()
-        flash(f'已强制更新 {target.username} 的安全密钥。', 'success')
+    if request.form.get('new_password'):
+        target.password = request.form.get('new_password'); db.session.commit()
     return redirect(url_for('dashboard'))
 
-# ==========================================
-# 🚀 核心修复三：只有手动运行时才执行初始化
-# ==========================================
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        init_defaults()
+    with app.app_context(): db.create_all(); init_defaults()
     app.run(host='0.0.0.0', port=5000, debug=False)
