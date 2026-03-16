@@ -45,7 +45,7 @@ Execute the following commands sequentially in your server terminal:
 
 ```bash
 # Download the Release v1.1.1 source code package
-wget [https://github.com/knowbul1koli/Nexus/releases/download/v1.1.1/nexus-linux-amd64-v1.1.1.zip](https://github.com/knowbul1koli/Nexus/releases/download/v1.1.1/nexus-linux-amd64-v1.1.1.zip)
+wget https://github.com/knowbul1koli/Nexus/releases/download/v1.1.1/nexus-linux-amd64-v1.1.1.zip
 
 # Extract to a dedicated directory and enter it
 unzip nexus-linux-amd64-v1.1.1.zip -d /root/site_manager
@@ -117,7 +117,7 @@ Nexus 是一款具备现代化 UI、高度响应式设计以及企业级权限�
 
 ```
 # 下载 Release v1.1.1 源码压缩包
-wget [https://github.com/knowbul1koli/Nexus/releases/download/v1.1.1/nexus-linux-amd64-v1.1.1.zip](https://github.com/knowbul1koli/Nexus/releases/download/v1.1.1/nexus-linux-amd64-v1.1.1.zip)
+wget https://github.com/knowbul1koli/Nexus/releases/download/v1.1.1/nexus-linux-amd64-v1.1.1.zip
 
 # 解压至专属目录并进入
 unzip nexus-linux-amd64-v1.1.1.zip -d /root/site_manager
